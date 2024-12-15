@@ -5,17 +5,20 @@ import io
 import pandas as pd
 import numpy as np
 import plotly.express as px
-from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression
+
 from sklearn.metrics import r2_score
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression
 
-processed_df = None
+
+processed = None
 trained_model = None
 selected_features = None
+
 app = Dash(__name__, suppress_callback_exceptions=True)
 
 app.layout = html.Div([
@@ -28,10 +31,15 @@ app.layout = html.Div([
             'borderWidth': '1px', 'borderStyle': 'dashed',
             'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'
         },
+
+
+
         multiple=False
     ),
     html.Div(id='output-data-upload'),
     
+
+
     html.Div([
         html.Label('Select Target Variable:'),
         dcc.Dropdown(id='target-dropdown', options=[], value=None)
@@ -39,12 +47,16 @@ app.layout = html.Div([
 
     html.Div([
         html.Label('Select Categorical Variable:'),
+
+
         dcc.RadioItems(id='categorical-radio', options=[], value=None)
     ], style={'margin': '10px'}),
 
     html.Div([
         dcc.Graph(id='category-average-chart', style={'flex': 1, 'margin-right': '10px'}),
+
         dcc.Graph(id='correlation-chart', style={'flex': 1, 'margin-left': '10px'})
+
     ], style={'display': 'flex', 'justify-content': 'space-between'}),
 
     html.Div([
@@ -56,6 +68,7 @@ app.layout = html.Div([
 
             html.Label('Prediction Input (comma-separated):'),
             dcc.Input(id='predict-input', type='text', value=''),
+
             html.Button('Predict', id='predict-button', n_clicks=0),
             html.Div(id='prediction-output')
         ])
@@ -70,6 +83,7 @@ app.layout = html.Div([
         Output('target-dropdown', 'options'),
         Output('target-dropdown', 'value'),
         Output('categorical-radio', 'options'),
+
         Output('categorical-radio', 'value'),
         Output('feature-checklist', 'options'),
         Output('feature-checklist', 'value')
@@ -87,6 +101,7 @@ def update_output(content, name, date):
 
             df_filled = df.fillna(df.mean(numeric_only=True))
             for col in df.select_dtypes(include=['object', 'category']):
+
                 if df[col].isnull().any():
                     mode_value = df[col].mode().iloc[0]
                     df_filled[col] = df[col].fillna(mode_value)
@@ -94,17 +109,19 @@ def update_output(content, name, date):
             categorical_columns = df.select_dtypes(include=['object', 'category']).columns
             numeric_columns = df.select_dtypes(include=[np.number]).columns
 
-            global processed_df
-            processed_df = df_filled
+            global processed
+            processed = df_filled
 
             target_options = [{'label': col, 'value': col} for col in numeric_columns]
             categorical_options = [{'label': col, 'value': col} for col in categorical_columns]
+
             feature_options = [{'label': col, 'value': col} for col in df_filled.columns if col != '']
 
             output_children = html.Div([
                 html.P(f'Rows: {len(df)}'),
                 html.P(f'Columns: {", ".join(df.columns)}'),
                 html.P(f'Total Missing Values (Before): {df.isnull().sum().sum()}'),
+                
                 html.P(f'Total Missing Values (After): {df_filled.isnull().sum().sum()}')
             ])
 
@@ -122,11 +139,11 @@ def update_output(content, name, date):
      Input('categorical-radio', 'value')]
 )
 def update_category_average_chart(target_variable, categorical_variable):
-    if processed_df is None or target_variable is None or categorical_variable is None:
+    if processed is None or target_variable is None or categorical_variable is None:
         return {}
 
     try:
-        category_avg = processed_df.groupby(categorical_variable)[target_variable].mean().reset_index()
+        category_avg = processed.groupby(categorical_variable)[target_variable].mean().reset_index()
         fig = px.bar(
             category_avg,
             x=categorical_variable,
@@ -145,11 +162,11 @@ def update_category_average_chart(target_variable, categorical_variable):
     Input('target-dropdown', 'value')
 )
 def update_correlation_chart(target_variable):
-    if processed_df is None or target_variable is None:
+    if processed is None or target_variable is None:
         return {}
 
     try:
-        numeric_df = processed_df.select_dtypes(include=[np.number])
+        numeric_df = processed.select_dtypes(include=[np.number])
         corr_matrix = numeric_df.corr()
         target_correlations = corr_matrix[target_variable].abs().sort_values(ascending=False)[1:]
 
@@ -171,17 +188,21 @@ def update_correlation_chart(target_variable):
      State("target-dropdown", "value")]
 )
 def train_model(n_clicks, features, target):
-    global processed_df, trained_model, selected_features
+    global processed, trained_model, selected_features
 
-    if n_clicks == 0 or processed_df is None or not features or target is None:
-        return "Waiting for inputs..."
+    if n_clicks == 0 or processed is None or not features or target is None:
+        return "Enter inputs"
 
     try:
         selected_features = features
-        X = processed_df[features]
-        y = processed_df[target]
+        X = processed[features]
+
+
+        y = processed[target]
 
         numeric_features = X.select_dtypes(include=[np.number]).columns
+
+
         categorical_features = X.select_dtypes(exclude=[np.number]).columns
 
         numeric_transformer = Pipeline(steps=[
@@ -195,44 +216,53 @@ def train_model(n_clicks, features, target):
         ])
 
         preprocessor = ColumnTransformer(
+
             transformers=[
                 ("num", numeric_transformer, numeric_features),
                 ("cat", categorical_transformer, categorical_features)
             ]
         )
 
+
         model = Pipeline(steps=[
             ("preprocessor", preprocessor),
+
             ("regressor", LinearRegression())
         ])
 
         model.fit(X, y)
+
         trained_model = model
 
         r2 = r2_score(y, model.predict(X))
-        return f"Model trained successfully! R² Score: {r2:.4f}"
+
+        return f"R² Score: {r2:.4f}"
 
     except Exception as e:
-        return f"Error during training: {str(e)}"
+
+        return f"training error {str(e)}"
     
 
 
 @app.callback(
     Output("prediction-output", "children"),
     Input("predict-button", "n_clicks"),
+
     [State("predict-input", "value")]
 )
-def predict(n_clicks, input_values):
+
+
+def predict(submit, input_values):
     global trained_model, selected_features
 
-    if n_clicks == 0 or trained_model is None:
-        return "Waiting for prediction inputs..."
+    if submit == 0 or trained_model is None:
+        return "Click Predict to submit"
 
     try:
         input_values = [value.strip() for value in input_values.split(",")]
 
         if len(input_values) != len(selected_features):
-            return "Error: Input values do not match the selected features!"
+            return "Errors - inputs don't match the dataset"
 
         input_dict = {}
         for feature, value in zip(selected_features, input_values):
@@ -244,10 +274,10 @@ def predict(n_clicks, input_values):
         input_df = pd.DataFrame([input_dict])
 
         prediction = trained_model.predict(input_df)[0]
-        return f"Predicted Target Value: {prediction:.4f}"
+        return f"Prediction: {prediction:.4f}"
 
     except Exception as e:
-        return f"Error during prediction: {str(e)}"
+        return "Prediction error"
 
 
 if __name__ == '__main__':
