@@ -29,10 +29,8 @@ app.layout = html.Div([
         style={
             'width': '100%', 'height': '60px', 'lineHeight': '60px',
             'borderWidth': '1px', 'borderStyle': 'dashed',
-            'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px'
+            'borderRadius': '5px', 'textAlign': 'center', 'margin': '10px','backgroundColor':'gray'
         },
-
-
 
         multiple=False
     ),
@@ -41,9 +39,15 @@ app.layout = html.Div([
 
 
     html.Div([
-        html.Label('Select Target Variable:'),
-        dcc.Dropdown(id='target-dropdown', options=[], value=None)
-    ], style={'margin': '10px'}),
+        html.Label('Select Target Variable:   '),
+        dcc.Dropdown(id='target-dropdown', options=[], value=None,style={'width': '150px','display': 'inline-block'} )
+    ], style={
+        'margin': '10px',
+        'textAlign': 'center',        
+        'backgroundColor': '#D3D3D3',   
+        'padding': '20px',            
+        'borderRadius': '8px'  
+    }),
 
     html.Div([
         html.Label('Select Categorical Variable:'),
@@ -127,11 +131,7 @@ def update_output(content, name, date):
             feature_options = [{'label': col, 'value': col} for col in df_filled.columns if col != '']
 
             output_children = html.Div([
-                html.P(f'Rows: {len(df)}'),
-                html.P(f'Columns: {", ".join(df.columns)}'),
-                html.P(f'Total Missing Values (Before): {df.isnull().sum().sum()}'),
                 
-                html.P(f'Total Missing Values (After): {df_filled.isnull().sum().sum()}')
             ])
 
             return output_children, df_filled.to_dict('records'), target_options, None, categorical_options, None, feature_options, []
