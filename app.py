@@ -181,11 +181,9 @@ def train_model(n_clicks, features, target):
         X = processed_df[features]
         y = processed_df[target]
 
-        # Split features into numeric and categorical
         numeric_features = X.select_dtypes(include=[np.number]).columns
         categorical_features = X.select_dtypes(exclude=[np.number]).columns
 
-        # Pipelines for preprocessing
         numeric_transformer = Pipeline(steps=[
             ("imputer", SimpleImputer(strategy="mean")),
             ("scaler", StandardScaler())
@@ -196,7 +194,6 @@ def train_model(n_clicks, features, target):
             ("onehot", OneHotEncoder(handle_unknown="ignore"))
         ])
 
-        # Combine preprocessors
         preprocessor = ColumnTransformer(
             transformers=[
                 ("num", numeric_transformer, numeric_features),
@@ -204,13 +201,11 @@ def train_model(n_clicks, features, target):
             ]
         )
 
-        # Build the model pipeline
         model = Pipeline(steps=[
             ("preprocessor", preprocessor),
             ("regressor", LinearRegression())
         ])
 
-        # Train the model
         model.fit(X, y)
         trained_model = model
 
@@ -221,7 +216,7 @@ def train_model(n_clicks, features, target):
         return f"Error during training: {str(e)}"
     
 
-    
+
 @app.callback(
     Output("prediction-output", "children"),
     Input("predict-button", "n_clicks"),
@@ -234,26 +229,20 @@ def predict(n_clicks, input_values):
         return "Waiting for prediction inputs..."
 
     try:
-        # Split input values based on commas
         input_values = [value.strip() for value in input_values.split(",")]
 
-        # Check if input length matches the selected features
         if len(input_values) != len(selected_features):
             return "Error: Input values do not match the selected features!"
 
-        # Create a DataFrame for the input
         input_dict = {}
         for feature, value in zip(selected_features, input_values):
             try:
-                # Try converting numeric values
                 input_dict[feature] = float(value)
             except ValueError:
-                # Leave categorical values as is
                 input_dict[feature] = value
 
         input_df = pd.DataFrame([input_dict])
 
-        # Make a prediction using the trained model
         prediction = trained_model.predict(input_df)[0]
         return f"Predicted Target Value: {prediction:.4f}"
 
