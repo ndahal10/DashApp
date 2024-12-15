@@ -8,7 +8,7 @@ import plotly.express as px
 
 from sklearn.metrics import r2_score
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, LabelEncoder
 from sklearn.compose import ColumnTransformer
 
 from sklearn.pipeline import Pipeline
@@ -107,10 +107,19 @@ def update_output(content, name, date):
                     df_filled[col] = df[col].fillna(mode_value)
 
             categorical_columns = df.select_dtypes(include=['object', 'category']).columns
-            numeric_columns = df.select_dtypes(include=[np.number]).columns
+            label_encoder = LabelEncoder()
+
+            if 'size' in df_filled.columns:
+                df_filled['size'] = label_encoder.fit_transform(df_filled['size'])
+
+            df_encoded = pd.get_dummies(df_filled, columns=[col for col in categorical_columns if col != 'size'], drop_first=True)
+
 
             global processed
             processed = df_filled
+            global cats 
+            cats = df_encoded
+            numeric_columns = df.select_dtypes(include=[np.number]).columns
 
             target_options = [{'label': col, 'value': col} for col in numeric_columns]
             categorical_options = [{'label': col, 'value': col} for col in categorical_columns]
@@ -166,7 +175,7 @@ def update_correlation_chart(target_variable):
         return {}
 
     try:
-        numeric_df = processed.select_dtypes(include=[np.number])
+        numeric_df = cats.select_dtypes(include=[np.number])
         corr_matrix = numeric_df.corr()
         target_correlations = corr_matrix[target_variable].abs().sort_values(ascending=False)[1:]
 
